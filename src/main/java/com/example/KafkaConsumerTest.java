@@ -17,6 +17,8 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,11 +28,14 @@ import java.util.Map;
 /**
  * Created by amarendra on 17/3/17.
  */
+@SpringBootApplication
 public class KafkaConsumerTest {
 
     public static final Logger LOGGER = Logger.getLogger(KafkaConsumerTest.class);
 
     public static void main(String[] args) throws InterruptedException {
+
+        SpringApplication.run(KafkaConsumerTest.class, args);
 
         Map<String, Object> kafkaConsParams = new HashMap<>();
         kafkaConsParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
