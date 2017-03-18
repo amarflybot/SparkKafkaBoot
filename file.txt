@@ -1,1 +1,0 @@
-http://msvaljek.blogspot.in/2015/12/stream-processing-with-spring-kafka_44.html
