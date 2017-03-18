@@ -32,3 +32,6 @@ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic consumer
 
 Describe Topics:
 bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic consumer
+
+CDH Kafka Security:
+https://www.cloudera.com/documentation/kafka/latest/topics/kafka_security.html
