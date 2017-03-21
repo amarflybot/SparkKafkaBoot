@@ -1,6 +1,8 @@
 package com.example;
 
 
+import com.bazaarvoice.jolt.Chainr;
+import com.bazaarvoice.jolt.JsonUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -10,20 +12,25 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.*;
+import org.apache.spark.rdd.RDD;
 import org.apache.spark.streaming.Durations;
+import org.apache.spark.streaming.Time;
+import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
+import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import scala.Tuple2;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by amarendra on 17/3/17.
@@ -79,16 +86,76 @@ public class KafkaConsumerTest {
                         return new Tuple2<>(record.key(), record.value());
                     }
                 }).print();*/
+        JavaDStream<Object> objectJavaDStream = directStream.flatMap(new FlatMapFunction<ConsumerRecord<String, String>, Object>() {
+            @Override
+            public Iterator<Object> call(ConsumerRecord<String, String> stringStringConsumerRecord) throws Exception {
+                LOGGER.info(" KEY-> " + stringStringConsumerRecord.key() + " VALUE-> " + stringStringConsumerRecord.value());
+                Object object = JsonUtils.jsonToObject(stringStringConsumerRecord.value());
+                return Arrays.asList(object).iterator();
+            }
+        });
 
-        directStream.map(new Function<ConsumerRecord<String,String>, Object>() {
+        JavaPairDStream<Object, Object> objectObjectJavaPairDStream = objectJavaDStream.mapToPair(new PairFunction<Object, Object, Object>() {
+            @Override
+            public Tuple2<Object, Object> call(Object o) throws Exception {
+                List<Object> specs = JsonUtils.classpathToList("/testSpec.json");
+                Chainr chainr = Chainr.fromSpec(specs);
+                Object transformedOutput = chainr.transform(o);
+                Tuple2<Object, Object> objectTuple2 = new Tuple2<>(o, transformedOutput);
+                return objectTuple2;
+            }
+        });
+        /*JavaPairDStream<Object, Object> reduceByKey = objectObjectJavaPairDStream.reduceByKey(new Function2<Object, Object, Object>() {
+            @Override
+            public Object call(Object v1, Object v2) throws Exception {
+                final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
+                String prettyJsonStringResult = JsonUtils.toPrettyJsonString(v2);
+                kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, prettyJsonStringResult));
+                return prettyJsonStringResult;
+            }
+        });*/
+        objectObjectJavaPairDStream.foreachRDD(new VoidFunction<JavaPairRDD<Object, Object>>() {
+            @Override
+            public void call(JavaPairRDD<Object, Object> objectObjectJavaPairRDD) throws Exception {
+                objectObjectJavaPairRDD.foreach(new VoidFunction<Tuple2<Object, Object>>() {
+                    @Override
+                    public void call(Tuple2<Object, Object> objectObjectTuple2) throws Exception {
+                        System.out.println(objectObjectTuple2);
+                    }
+                });
+            }
+        });
+        /*directStream.map(new Function<ConsumerRecord<String, String>, Object>() {
             @Override
             public Object call(ConsumerRecord<String, String> v1) throws Exception {
-                LOGGER.info(" KEY-> "+ v1.key() + " VALUE-> "+v1.value());
-                final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
-                kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, v1.value().toUpperCase()));
-                return null;
+                LOGGER.info(" KEY-> " + v1.key() + " VALUE-> " + v1.value());
+                Object object = JsonUtils.jsonToObject(v1.value());
+                //final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
+                //kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, v1.value().toUpperCase()));
+                return object;
             }
-        }).print();
+        }).reduce(new Function2<Object, Object, Object>() {
+            @Override
+            public Object call(Object v1, Object v2) throws Exception {
+                List<Object> specs = JsonUtils.classpathToList("/testSpec.json");
+                Chainr chainr = Chainr.fromSpec(specs);
+                Object transformedOutput = chainr.transform(v2);
+                return transformedOutput;
+            }
+        }).print();*//*.foreachRDD(new VoidFunction<JavaRDD<Object>>() {
+            @Override
+            public void call(JavaRDD<Object> objectJavaRDD) throws Exception {
+
+                objectJavaRDD.foreach(new VoidFunction<Object>() {
+                    @Override
+                    public void call(Object transformedOutput) throws Exception {
+                        final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
+                        String prettyJsonStringResult = JsonUtils.toPrettyJsonString(transformedOutput);
+                        kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, prettyJsonStringResult));
+                    }
+                });
+            }
+        })*/
         /*directStream.foreachRDD(new VoidFunction2<JavaRDD<ConsumerRecord<String, String>>, Time>() {
             @Override
             public void call(JavaRDD<ConsumerRecord<String, String>> consumerRecordJavaRDD, Time time) throws Exception {

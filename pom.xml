@@ -29,6 +29,7 @@
 		<kafka_2.10.version>0.10.2.0</kafka_2.10.version>
 		<!-- The main class to start by executing java -jar -->
 		<start-class>com.example.KafkaConsumerTest</start-class>
+		<defaultScope>compile</defaultScope>
 	</properties>
 
 	<dependencies>
@@ -53,14 +54,14 @@
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-core_2.11</artifactId>
 			<version>${spark-core.version}</version>
-			<scope>provided</scope>
+			<scope>${defaultScope}</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-streaming_2.11</artifactId>
 			<version>${spark-core.version}</version>
-			<scope>provided</scope>
+			<scope>${defaultScope}</scope>
 		</dependency>
 
 		<dependency>
@@ -80,6 +81,19 @@
 			<groupId>org.apache.kafka</groupId>
 			<artifactId>kafka_2.11</artifactId>
 			<version>${kafka_2.10.version}</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.bazaarvoice.jolt/jolt-complete -->
+		<dependency>
+			<groupId>com.bazaarvoice.jolt</groupId>
+			<artifactId>jolt-complete</artifactId>
+			<version>0.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
 		</dependency>
 
 	</dependencies>
@@ -173,6 +187,15 @@
 
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>deploy</id>
+			<properties>
+				<defaultScope>provided</defaultScope>
+			</properties>
+		</profile>
+	</profiles>
 
 	<!--<repositories>
 		<repository>
