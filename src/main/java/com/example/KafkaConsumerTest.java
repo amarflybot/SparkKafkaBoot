@@ -3,6 +3,10 @@ package com.example;
 
 import com.bazaarvoice.jolt.Chainr;
 import com.bazaarvoice.jolt.JsonUtils;
+import com.mongodb.DB;
+import com.mongodb.DBObject;
+import com.mongodb.Mongo;
+import com.mongodb.util.JSON;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -26,8 +30,10 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import scala.None$;
 import scala.Tuple2;
 
 import java.util.*;
@@ -102,19 +108,29 @@ public class KafkaConsumerTest {
                 Chainr chainr = Chainr.fromSpec(specs);
                 Object transformedOutput = chainr.transform(o);
                 Tuple2<Object, Object> objectTuple2 = new Tuple2<>(o, transformedOutput);
+                LOGGER.info(" Tuple_1-> " + JsonUtils.toPrettyJsonString(objectTuple2._1) +
+                        " Tuple_2-> " + JsonUtils.toPrettyJsonString(objectTuple2._2));
                 return objectTuple2;
             }
         });
-        /*JavaPairDStream<Object, Object> reduceByKey = objectObjectJavaPairDStream.reduceByKey(new Function2<Object, Object, Object>() {
+        JavaPairDStream<Object, Object> reduceByKey = objectObjectJavaPairDStream.reduceByKey(new Function2<Object, Object, Object>() {
             @Override
             public Object call(Object v1, Object v2) throws Exception {
+                LOGGER.info("reduceByKey  Object1-> " + JsonUtils.toPrettyJsonString(v1) +
+                        " Object2-> " + JsonUtils.toPrettyJsonString(v2));
                 final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
                 String prettyJsonStringResult = JsonUtils.toPrettyJsonString(v2);
                 kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, prettyJsonStringResult));
+                Mongo mongo = new Mongo("localhost", 27017);
+                DB db = mongo.getDB("messageProcessed");
+                DBObject dbObject = (DBObject) JSON.parse(prettyJsonStringResult);
+                db.getCollection("test").insert(dbObject);
                 return prettyJsonStringResult;
             }
-        });*/
-        objectObjectJavaPairDStream.foreachRDD(new VoidFunction<JavaPairRDD<Object, Object>>() {
+        });
+
+        reduceByKey.print();
+        /*objectObjectJavaPairDStream.foreachRDD(new VoidFunction<JavaPairRDD<Object, Object>>() {
             @Override
             public void call(JavaPairRDD<Object, Object> objectObjectJavaPairRDD) throws Exception {
                 objectObjectJavaPairRDD.foreach(new VoidFunction<Tuple2<Object, Object>>() {
@@ -124,7 +140,7 @@ public class KafkaConsumerTest {
                     }
                 });
             }
-        });
+        });*/
         /*directStream.map(new Function<ConsumerRecord<String, String>, Object>() {
             @Override
             public Object call(ConsumerRecord<String, String> v1) throws Exception {
