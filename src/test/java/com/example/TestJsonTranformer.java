@@ -1,19 +1,11 @@
 package com.example;
 
-import com.bazaarvoice.jolt.Chainr;
-import com.bazaarvoice.jolt.JsonUtils;
-import org.json.JSONException;
-import org.junit.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-
-import java.util.List;
-
 /**
  * Created by amarendra on 21/03/17.
  */
 public class TestJsonTranformer {
 
-    @Test
+    /*@Test
     public void testTransformer() throws JSONException {
         List<Object> specs = JsonUtils.classpathToList("/testSpec.json");
         Chainr chainr = Chainr.fromSpec(specs);
@@ -25,5 +17,5 @@ public class TestJsonTranformer {
         String testOutString = JsonUtils.toPrettyJsonString(testOut);
         JSONAssert.assertEquals(testOutString,prettyJsonStringResult,false);
 
-    }
+    }*/
 }

@@ -16,13 +16,10 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.*;
-import org.apache.spark.rdd.RDD;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.streaming.Durations;
-import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
@@ -30,10 +27,6 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import scala.None$;
 import scala.Tuple2;
 
 import java.util.*;
@@ -41,17 +34,14 @@ import java.util.*;
 /**
  * Created by amarendra on 17/3/17.
  */
-@SpringBootApplication
 public class KafkaConsumerTest {
 
     public static final Logger LOGGER = Logger.getLogger(KafkaConsumerTest.class);
 
     public static void main(String[] args) throws InterruptedException {
 
-        SpringApplication.run(KafkaConsumerTest.class, args);
-
         Map<String, Object> kafkaConsParams = new HashMap<>();
-        kafkaConsParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        kafkaConsParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.2.10:9092");
         kafkaConsParams.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         kafkaConsParams.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         kafkaConsParams.put(ConsumerConfig.GROUP_ID_CONFIG, "groupA");
@@ -61,7 +51,7 @@ public class KafkaConsumerTest {
         kafkaConsParams.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
 
         final Map<String, Object> kafkaProdParams = new HashMap<>();
-        kafkaProdParams.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        kafkaProdParams.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.2.10:9092");
         kafkaProdParams.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         kafkaProdParams.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         kafkaProdParams.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -94,10 +84,10 @@ public class KafkaConsumerTest {
                 }).print();*/
         JavaDStream<Object> objectJavaDStream = directStream.flatMap(new FlatMapFunction<ConsumerRecord<String, String>, Object>() {
             @Override
-            public Iterator<Object> call(ConsumerRecord<String, String> stringStringConsumerRecord) throws Exception {
+            public Iterable<Object> call(ConsumerRecord<String, String> stringStringConsumerRecord) throws Exception {
                 LOGGER.info(" KEY-> " + stringStringConsumerRecord.key() + " VALUE-> " + stringStringConsumerRecord.value());
                 Object object = JsonUtils.jsonToObject(stringStringConsumerRecord.value());
-                return Arrays.asList(object).iterator();
+                return Arrays.asList(object);
             }
         });
 
@@ -121,7 +111,7 @@ public class KafkaConsumerTest {
                 final KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProdParams);
                 String prettyJsonStringResult = JsonUtils.toPrettyJsonString(v2);
                 kafkaProducer.send(new ProducerRecord<String, String>(topicToSend, prettyJsonStringResult));
-                Mongo mongo = new Mongo("localhost", 27017);
+                Mongo mongo = new Mongo("192.168.2.10", 27017);
                 DB db = mongo.getDB("messageProcessed");
                 DBObject dbObject = (DBObject) JSON.parse(prettyJsonStringResult);
                 db.getCollection("test").insert(dbObject);
